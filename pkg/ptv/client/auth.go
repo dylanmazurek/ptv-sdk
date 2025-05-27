@@ -1,4 +1,4 @@
-package ptv
+package client
 
 import (
 	"crypto/hmac"

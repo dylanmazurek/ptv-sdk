@@ -16,6 +16,7 @@ require (
 
 require (
 	github.com/aws/smithy-go v1.22.3
+	github.com/gorilla/schema v1.4.1
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/rs/zerolog v1.34.0

@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/dylanmazurek/ptv-sdk/pkg/ptv"
-	"github.com/dylanmazurek/ptv-sdk/pkg/ptv/models"
+	"github.com/dylanmazurek/ptv-sdk/pkg/ptv/constants"
+	"github.com/dylanmazurek/ptv-sdk/pkg/ptv/models/filters"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -26,70 +28,41 @@ func main() {
 	}
 
 	ptvClient := ptv.New(ctx, ptvOpts...)
-	fetchAndPrintRouteTypes(ptvClient)
-	fetchAndPrintRoutes(ptvClient)
 	fetchAndPrintDepartures(ptvClient)
 }
 
-func fetchAndPrintRouteTypes(client *ptv.Client) {
-	routeTypes, err := client.RouteTypes()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to fetch route types")
-		return
-	}
-
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Route Type Name", "Route Type"})
-	for _, rt := range routeTypes {
-		t.AppendRow(table.Row{rt.RouteTypeName, rt.RouteType})
-	}
-
-	t.Render()
-}
-
-func fetchAndPrintRoutes(client *ptv.Client) {
-	reqParams := models.RoutesRequest{
-		RouteTypes: []int{0, 1},
-	}
-
-	routes, err := client.Routes(reqParams)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to fetch routes")
-		return
-	}
-
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Route ID", "Route Name", "Route Type"})
-	for _, route := range routes {
-		t.AppendRow(table.Row{route.RouteID, route.RouteName, route.RouteType})
-	}
-
-	t.Render()
-}
-
 func fetchAndPrintDepartures(client *ptv.Client) {
-	stopId := 2942
-	routeId := 1041
+	stopID, _ := strconv.Atoi(os.Getenv("TEST_STOP_ID"))
+	routeType, _ := strconv.Atoi(os.Getenv("TEST_ROUTE_TYPE_ID"))
+	routeID, _ := strconv.Atoi(os.Getenv("TEST_ROUTE_ID"))
 
-	departures, err := client.DeparturesForStop(1, stopId, routeId)
+	afterDate := time.Now()
+
+	f := &filters.DeparturesFilter{
+		RouteType: constants.RouteType(routeType),
+		StopID:    stopID,
+		RouteID:   routeID,
+		AfterDate: &afterDate,
+		Expand: []constants.ExpandOption{
+			constants.ExpandAll,
+		},
+	}
+
+	resp, err := client.Departures(f)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to fetch departures")
+		log.Error().Err(err).Msg("failed to perform search")
 		return
 	}
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	fmt.Printf("Departures for Route %d at Stop %d\n", routeId, stopId)
-	t.AppendHeader(table.Row{"Scheduled", "Estimated"})
-	for _, dep := range departures {
-		estimated := "-"
-		if dep.EstimatedDeparture != nil {
-			estimated = dep.EstimatedDeparture.Local().Format("03:04PM")
-		}
-
-		t.AppendRow(table.Row{dep.ScheduledDeparture.Local().Format("03:04PM"), estimated})
+	t.AppendHeader(table.Row{"Direction ID", "Scheduled Departure", "Estimated Departure"})
+	for _, dep := range resp.Departures {
+		t.AppendRow(table.Row{
+			dep.DirectionID,
+			dep.ScheduledDeparture.HumanString(),
+			dep.EstimatedDeparture.HumanString(),
+		})
 	}
 
 	t.Render()

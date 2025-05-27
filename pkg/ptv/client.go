@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/dylanmazurek/ptv-sdk/pkg/ptv/client"
 	"github.com/dylanmazurek/ptv-sdk/pkg/ptv/constants"
 )
 
@@ -25,15 +26,15 @@ func New(ctx context.Context, opts ...Option) *Client {
 		opt(&clientOptions)
 	}
 
-	creds := &Credentials{
+	creds := client.Credentials{
 		Key:    clientOptions.AccessKey,
 		UserID: clientOptions.UserID,
 	}
 
-	newTransport := &addAuthTransport{
-		roundTripper: http.DefaultTransport,
-		credentials:  creds,
-	}
+	newTransport := client.NewAuthTransport(
+		http.DefaultTransport,
+		creds,
+	)
 
 	httpClient := &http.Client{
 		Transport: newTransport,
