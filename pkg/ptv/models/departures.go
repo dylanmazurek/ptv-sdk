@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 
 	"github.com/dylanmazurek/ptv-sdk/pkg/ptv/models/types"
@@ -19,8 +20,59 @@ type Departure struct {
 	DepartureSequence int     `json:"departure_sequence"`
 	Flags             string  `json:"flags"`
 
-	ScheduledDeparture types.DepartureTime `json:"-"`
-	EstimatedDeparture types.DepartureTime `json:"-"`
+	ScheduledDeparture types.DepartureTime  `json:"-"`
+	EstimatedDeparture *types.DepartureTime `json:"-"`
+}
+
+func (d *Departure) IsDelayed() bool {
+	return d.EstimatedDeparture != nil && !time.Time(*d.EstimatedDeparture).IsZero()
+}
+
+func (d *Departure) DepartureIsNextDay(timezone *time.Location) bool {
+	if d.EstimatedDeparture == nil || time.Time(*d.EstimatedDeparture).IsZero() {
+		return false
+	}
+
+	scheduledTime := time.Time(d.ScheduledDeparture)
+	estimatedTime := time.Time(*d.EstimatedDeparture)
+
+	nowInLocation := time.Now().In(timezone)
+
+	scheduledNextDay := nowInLocation.Day() != scheduledTime.Day() || nowInLocation.Year() != scheduledTime.Year()
+	if scheduledNextDay {
+		return true
+	}
+
+	estimatedNextDay := nowInLocation.Day() != estimatedTime.Day() || nowInLocation.Year() != estimatedTime.Year()
+
+	return estimatedNextDay
+}
+
+func (d *Departure) FriendlyDepartureTime(timezone *time.Location) string {
+	if !d.IsDelayed() {
+		scheduledTimeLocal := time.Time(d.ScheduledDeparture).In(timezone)
+		return scheduledTimeLocal.Format("3:04 PM")
+	}
+
+	estimatedDepartureLocal := time.Time(*d.EstimatedDeparture).In(timezone)
+	return estimatedDepartureLocal.Format("3:04 PM")
+}
+
+func (d *Departure) DelayMin() *int {
+	if d.IsDelayed() {
+		scheduledDeparture := time.Time(d.ScheduledDeparture)
+		estimatedDeparture := time.Time(*d.EstimatedDeparture)
+
+		estimatedDelay := estimatedDeparture.Sub(scheduledDeparture)
+		if estimatedDelay > 0 {
+			delayMinutes := int(math.RoundToEven(estimatedDelay.Minutes()))
+			if delayMinutes > 0 {
+				return &delayMinutes
+			}
+		}
+	}
+
+	return nil
 }
 
 func (d *Departure) UnmarshalJSON(data []byte) error {
@@ -54,7 +106,8 @@ func (d *Departure) UnmarshalJSON(data []byte) error {
 			return err
 		}
 
-		d.EstimatedDeparture = types.DepartureTime(estimatedTime)
+		departureTime := types.DepartureTime(estimatedTime)
+		d.EstimatedDeparture = &departureTime
 	}
 
 	return nil

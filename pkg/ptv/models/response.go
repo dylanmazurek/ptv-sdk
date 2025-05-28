@@ -3,9 +3,10 @@ package models
 import "encoding/json"
 
 type Response struct {
-	Departures  []Departure  `json:"-"`
-	Stops       []Stop       `json:"-"`
 	Routes      []Route      `json:"-"`
+	Directions  []Direction  `json:"-"`
+	Stops       []Stop       `json:"-"`
+	Departures  []Departure  `json:"-"`
 	Disruptions []Disruption `json:"-"`
 
 	Status Status `json:"status"`
@@ -16,9 +17,10 @@ func (d *Response) UnmarshalJSON(data []byte) error {
 	aux := &struct {
 		*Alias
 
-		Departures  json.RawMessage `json:"departures"`
-		Stops       json.RawMessage `json:"stops"`
 		Routes      json.RawMessage `json:"routes"`
+		Directions  json.RawMessage `json:"directions"`
+		Stops       json.RawMessage `json:"stops"`
+		Departures  json.RawMessage `json:"departures"`
 		Disruptions json.RawMessage `json:"disruptions"`
 	}{
 		Alias: (*Alias)(d),
@@ -29,14 +31,28 @@ func (d *Response) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if string(aux.Departures) != "{}" {
-		var departures []Departure
-		err := json.Unmarshal(aux.Departures, &departures)
+	if string(aux.Routes) != "{}" {
+		var routes map[string]Route
+		err := json.Unmarshal(aux.Routes, &routes)
 		if err != nil {
 			return err
 		}
 
-		d.Departures = departures
+		for _, route := range routes {
+			d.Routes = append(d.Routes, route)
+		}
+	}
+
+	if string(aux.Directions) != "{}" {
+		var directions map[string]Direction
+		err := json.Unmarshal(aux.Directions, &directions)
+		if err != nil {
+			return err
+		}
+
+		for _, direction := range directions {
+			d.Directions = append(d.Directions, direction)
+		}
 	}
 
 	if string(aux.Stops) != "{}" {
@@ -51,16 +67,14 @@ func (d *Response) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if string(aux.Routes) != "{}" {
-		var routes map[string]Route
-		err := json.Unmarshal(aux.Routes, &routes)
+	if string(aux.Departures) != "{}" {
+		var departures []Departure
+		err := json.Unmarshal(aux.Departures, &departures)
 		if err != nil {
 			return err
 		}
 
-		for _, route := range routes {
-			d.Routes = append(d.Routes, route)
-		}
+		d.Departures = departures
 	}
 
 	if string(aux.Disruptions) != "{}" {

@@ -47,13 +47,8 @@ func WithAccessKey(key string) Option {
 	}
 }
 
-func WithTimezone(timezone string) Option {
-	defaultTimezone, err := time.LoadLocation(constants.DEFAULT_TIMEZONE)
-	if err != nil {
-		defaultTimezone, _ = time.LoadLocation(constants.DEFAULT_TIMEZONE)
-	}
-
+func WithTimezone(timezone *time.Location) Option {
 	return func(opts *Options) {
-		opts.Timezone = defaultTimezone
+		opts.Timezone = timezone
 	}
 }

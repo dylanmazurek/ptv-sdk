@@ -10,36 +10,44 @@ const (
 	RouteTypeNightRider RouteType = 4
 )
 
+var RouteTypeNames = map[RouteType]string{
+	RouteTypeTrain:      "train",
+	RouteTypeTram:       "tram",
+	RouteTypeBus:        "bus",
+	RouteTypeVLine:      "vline",
+	RouteTypeNightRider: "nightrider",
+}
+
+var FriendlyRouteTypeNames = map[RouteType]string{
+	RouteTypeTrain:      "Train",
+	RouteTypeTram:       "Tram",
+	RouteTypeBus:        "Bus",
+	RouteTypeVLine:      "V/Line",
+	RouteTypeNightRider: "NightRider",
+}
+
 func (r RouteType) String() string {
-	switch r {
-	case RouteTypeTrain:
-		return "train"
-	case RouteTypeTram:
-		return "tram"
-	case RouteTypeBus:
-		return "bus"
-	case RouteTypeVLine:
-		return "vline"
-	case RouteTypeNightRider:
-		return "nightrider"
-	default:
-		return "unknown"
+	if name, ok := RouteTypeNames[r]; ok {
+		return name
 	}
+
+	return "unknown"
 }
 
 func RouteTypeFromString(s string) (RouteType, bool) {
-	switch s {
-	case "train":
-		return RouteTypeTrain, true
-	case "tram":
-		return RouteTypeTram, true
-	case "bus":
-		return RouteTypeBus, true
-	case "vline":
-		return RouteTypeVLine, true
-	case "nightrider":
-		return RouteTypeNightRider, true
-	default:
-		return 0, false
+	for rt, name := range RouteTypeNames {
+		if name == s {
+			return rt, true
+		}
 	}
+
+	return 0, false
+}
+
+func (r RouteType) FriendlyString() string {
+	if name, ok := FriendlyRouteTypeNames[r]; ok {
+		return name
+	}
+
+	return "Unknown"
 }
